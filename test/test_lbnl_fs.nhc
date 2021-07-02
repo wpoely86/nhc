@@ -147,7 +147,7 @@ function nhc_fs_mounts_gather_data() {
     )
 }
 
-plan $((9+5+3+5+5+4+4+4+2+5+5+10+7+7+10+7+7)) "lbnl_fs.nhc" && {
+plan $((12+5+3+5+5+4+4+4+2+5+5+10+7+7+10+7+7+1)) "lbnl_fs.nhc" && {
     is "`type -t check_fs_mount 2>&1`" 'function' 'check_fs_mount() loaded properly'
     is "`type -t check_fs_mount_rw 2>&1`" 'function' 'check_fs_mount_rw() loaded properly'
     is "`type -t check_fs_mount_ro 2>&1`" 'function' 'check_fs_mount_ro() loaded properly'
@@ -157,6 +157,9 @@ plan $((9+5+3+5+5+4+4+4+2+5+5+10+7+7+10+7+7)) "lbnl_fs.nhc" && {
     is "`type -t check_fs_inodes 2>&1`" 'function' 'check_fs_inodes() loaded properly'
     is "`type -t check_fs_ifree 2>&1`" 'function' 'check_fs_ifree() loaded properly'
     is "`type -t check_fs_iused 2>&1`" 'function' 'check_fs_iused() loaded properly'
+    is "`type -t array_contains 2>&1`" 'function' 'array_contains() loaded properly'
+    is "`type -t check_all_local_fs_free 2>&1`" 'function' 'check_all_local_fs_free() loaded properly'
+    is "`type -t check_all_local_fs_mount_check_found_action 2>&1`" 'function' 'check_all_local_fs_mount_check_found_action() loaded properly'
 
     local OLD_SHELL="$SHELL"
     SHELL=:
@@ -360,6 +363,9 @@ plan $((9+5+3+5+5+4+4+4+2+5+5+10+7+7+10+7+7)) "lbnl_fs.nhc" && {
     is $? 1 "check_fs_iused() - >2% used inodes on /home"
     check_fs_iused /proc 999
     is $? 0 "check_fs_iused() on pseudofilesystem passes (with warning)"
+
+    check_all_local_fs_free -t 10% -X tmpfs -X devtmpfs -C ext4
+    is $? 0 "check_all_local_fs_free() - > 10% free on all ext4 filesystems"
 
     SHELL="$OLD_SHELL"
 } ; unplan

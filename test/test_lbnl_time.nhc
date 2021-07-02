@@ -1,0 +1,11 @@
+# Tests for lbnl_time.nhc
+
+plan 2 "lbnl_time.nhc" && {
+    is "`type -t check_ptpd_drift 2>&1`" 'function' 'check_ptpd_drift() loaded properly'
+    is "`type -t check_chrony_drift 2>&1`" 'function' 'check_chrony_drift() loaded properly'
+
+    local OLD_SHELL="$SHELL"
+    SHELL=:
+
+    SHELL="$OLD_SHELL"
+} ; unplan
