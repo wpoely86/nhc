@@ -1,6 +1,6 @@
 %global name    @PACKAGE@
 %global version @VERSION@
-%global release %{rel}%{?dist}
+%global release %{rel}%{?dist}.bx.3
 
 %global gitrelease @GITRELEASE@
 %{expand:%%global gd_rel_delta %(git describe --abbrev=4 --always --tags --long --match '[[:digit:]][[:alnum:].]*[[:alnum:]]' --dirty=.1 | cut -d- -f 2- | tr '-' '.')}
@@ -87,10 +87,10 @@ test "$RPM_BUILD_ROOT" != "/" && %{__rm} -rf $RPM_BUILD_ROOT
 %dir %{nhc_script_dir}/
 %dir %{nhc_helper_dir}/
 %ghost %dir %{_sysconfdir}/%{sname}/sysconfig/
-%config(noreplace) %{_sysconfdir}/%{sname}/%{sname}.conf
-%config(noreplace) %{_sysconfdir}/logrotate.d/%{sname}
-%config(noreplace) %{nhc_script_dir}/*.nhc
-%config(noreplace) %{nhc_helper_dir}/*
-%config(noreplace) %{_sbindir}/%{sname}
-%config(noreplace) %{_sbindir}/%{sname}-genconf
-%config(noreplace) %{_sbindir}/%{sname}-wrapper
+%config %{_sysconfdir}/%{sname}/%{sname}.conf
+%config %{_sysconfdir}/logrotate.d/%{sname}
+%config %{nhc_script_dir}/*.nhc
+%config %{nhc_helper_dir}/*
+%config %{_sbindir}/%{sname}
+%config %{_sbindir}/%{sname}-genconf
+%config %{_sbindir}/%{sname}-wrapper
