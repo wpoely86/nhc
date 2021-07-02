@@ -2,12 +2,18 @@
 
 PACKAGE=lbnl-nhc
 
-mkdir -p BUILD SOURCES SPECS RPMS BUILDROOT
+export BDISTRPMBASEDIR=$(pwd)/rpmbuild
+rm -Rf $BDISTRPMBASEDIR
+mkdir -p $BDISTRPMBASEDIR/{BUILD,SPECS,RPMS,SRPMS,SOURCES}
 
 ./autogen.sh
 ./configure
 make dist
-cp lbnl-nhc-*.tar.gz SOURCES
-cp ${PACKAGE}.spec "SPECS"
-rpmbuild --define "_topdir $PWD" -ba SPECS/${PACKAGE}.spec
-rm -rf BUILD SOURCES BUILDROOT SPECS
+cp -a lbnl-nhc-*.tar.gz "$BDISTRPMBASEDIR/SOURCES"
+
+rpmbuild --define "_topdir $BDISTRPMBASEDIR" -ba "${PACKAGE}.spec"
+
+rm -rf dist
+mkdir -p dist
+
+find $BDISTRPMBASEDIR -regex '.*/RPMS/.*rpm' |grep -v debuginfo |xargs -I '{}' cp -a '{}' dist
