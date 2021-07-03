@@ -1,0 +1,71 @@
+# LBNL NHC - Time checks
+#
+# Andy Georges <andy.georges@ugent.be>
+# 15 December 2010
+#
+
+
+# Checks the drift from the ptpd status file and compares it to the given threshold
+function check_ptpd_drift() {
+    local DRIFT=0
+
+    if [ ! -f "$NHC_PTPD_STATUS" ]; then
+        die 1 "$FUNCNAME: No $NHC_PTPD_STATUS file found"
+        return 1
+    fi
+    DRIFT=$(grep "Offset from Master" "$NHC_PTPD_STATUS" | tr -s " " | cut -d" " -f5)
+    dbg "$FUNCNAME: drift is $DRIFT"
+
+    if [ -z "${DRIFT}" ]; then
+            dbg "Could not find drift line, sleeping 5 seconds"
+            sleep 5
+
+            DRIFT=$(grep "Offset from Master" "$NHC_PTPD_STATUS" | tr -s " " | cut -d" " -f5)
+            dbg "$FUNCNAME: drift is $DRIFT"
+
+            if [ -z "${DRIFT}" ]; then
+                    die 1 "$FUNCNAME: No drift line found in $NHC_PTPD_STATUS after 5 second sleep"
+                    return 1
+            fi
+    fi
+
+    if (( $(echo "${DRIFT#-} > $NHC_PTPD_MAX_DRIFT " | bc -l) )); then
+        die 1 "$FUNCNAME: PTPD drift too high: ${DRIFT} with threshold $NHC_PTPD_MAX_DRIFT"
+        return 1
+    fi
+
+    return 0
+}
+
+function check_chrony_drift() {
+    local DRIFT=0
+
+    DRIFT=$(chronyc tracking | grep "Last offset *:" | tr -s " " | cut -d" " -f5 | sed 's/^[-+]//')
+    dbg "$FUNCNAME: drift is $DRIFT"
+
+    if [ -z "${DRIFT}" ]; then
+            dbg "Could not find drift line, sleeping 5 seconds"
+            sleep 5
+
+            DRIFT=$(chronyc tracking | grep "Last offset *:" | tr -s " " | cut -d" " -f5 | sed 's/^[-+]//')
+            dbg "$FUNCNAME: drift is $DRIFT"
+
+            if [ -z "${DRIFT}" ]; then
+                    die 1 "$FUNCNAME: No drift line found in chronyc output after 5 second sleep"
+                    return 1
+            fi
+    fi
+
+    if (( $(echo "${DRIFT#-} > $NHC_CHRONYC_MAX_DRIFT " | bc -l) )); then
+        die 1 "$FUNCNAME: CHRONY drift too high: ${DRIFT} with threshold $NHC_CHRONYC_MAX_DRIFT"
+        return 1
+    fi
+
+    return 0
+
+
+}
+
+
+
+

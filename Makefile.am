@@ -14,7 +14,9 @@ nobase_dist_conf_DATA = scripts/lbnl_cmd.nhc scripts/common.nhc		\
                         scripts/lbnl_fs.nhc  scripts/lbnl_hw.nhc	\
                         scripts/lbnl_job.nhc scripts/lbnl_moab.nhc	\
                         scripts/lbnl_net.nhc scripts/lbnl_nv.nhc	\
-                        scripts/lbnl_ps.nhc
+                        scripts/lbnl_ps.nhc                         \
+						scripts/lbnl_group.nhc                      \
+						scripts/lbnl_time.nhc
 
 MAINTAINERCLEANFILES = Makefile.in aclocal.m4 configure install-sh missing
 DISTCLEANFILES = 
@@ -23,7 +25,8 @@ EXTRA_DIST = COPYING ChangeLog LICENSE autogen.sh nhc.logrotate		\
              nhc-test.conf lbnl-nhc.spec contrib/nhc.cron
 
 install-data-local:
-	$(MKDIR_P) '$(DESTDIR)$(logrotatedir)' '$(DESTDIR)$(localstatedir)/lib/nhc' '$(DESTDIR)$(localstatedir)/run/nhc'
+	$(MKDIR_P) '$(DESTDIR)$(logrotatedir)' '$(DESTDIR)$(localstatedir)/lib/nhc' \
+		'$(DESTDIR)$(localstatedir)/run/nhc' '$(DESTDIR)$(confdir)/sysconfig'
 	$(INSTALL_DATA) $(srcdir)/nhc.logrotate '$(DESTDIR)$(logrotatedir)/nhc'
 
 uninstall-local:

@@ -160,7 +160,7 @@ function nhc_fs_dfi_gather_data() {
 # New syntax:  check_fs_mount [ -0 ] [ -r ] [ -s src ] [ -t fstype ] [ -o options ] [ -O mount_options ] [ -e cmd ] [ -E cmd ] -f fs
 function check_fs_mount() {
     local FS="$1" SRC="$2" TYPE="$3" OPTIONS="$4"
-    local REMOUNT=0 NONFATAL=0 MOUNT_OPTS="" ACTION="" FOUND_ACTION=""
+    local REMOUNT=0 NONFATAL=0 MOUNT_OPTS="" ACTION="" FOUND_ACTION="" TOUCH_ACTION=0
     local -a AUTOFS_LIST FS_LIST SRC_LIST TYPE_LIST OPTIONS_LIST
     local i FOUND MSG
 
@@ -172,7 +172,7 @@ function check_fs_mount() {
         [[ -n "$OPTIONS" ]] && OPTIONS_LIST=( "$OPTIONS" )
     else
         OPTIND=1
-        while getopts ":0rE:F:O:e:f:o:s:t:" OPTION ; do
+        while getopts ":0rTE:F:O:e:f:o:s:t:" OPTION ; do
             case "$OPTION" in
                 0) NONFATAL=1 ;;
                 r) REMOUNT=1 ;;
@@ -184,6 +184,7 @@ function check_fs_mount() {
                 t) TYPE_LIST[${#TYPE_LIST[*]}]="$OPTARG" ;;
                 e) ACTION="$OPTARG" ;;
                 E) FOUND_ACTION="$OPTARG" ;;
+                T) TOUCH_ACTION=1 ;;
                 -) ((OPTIND++)) ; break ;;
                 :) die 1 "$CHECK:  Option -$OPTARG requires an argument." ; return 1 ;;
                 \?) die 1 "$CHECK:  Invalid option:  -$OPTARG" ; return 1 ;;
@@ -256,6 +257,12 @@ function check_fs_mount() {
             break
         done
         if [[ "$FOUND" == "1" ]]; then
+            if [[ "$TOUCH_ACTION" -eq 1 ]]; then
+                if ! ${SHELL:-/bin/bash} -c "touch $FS/.mounttest.nhc"; then
+                    die 1 "Cannot touch $FS/.mounttest.nhc"
+                    return 1
+                fi
+            fi
             # The filesystem is mounted correctly.  Move on to the next one.
             if [[ -n "$FOUND_ACTION" ]]; then
                 ${SHELL:-/bin/bash} -c "$FOUND_ACTION" &
@@ -374,7 +381,7 @@ function check_fs_free() {
             continue
         fi
         if [[ "${DF_SIZE[$i]}" == "0" ]]; then
-            syslog "WARNING:  Possible bogus check:  ${FUNCNAME[0]} on pseudofilesystem $FS"
+            syslog "WARNING:  Possible bogus check:  ${FUNCNAME[0]} on pseudofilesystem $FS (${DF_MNTPT[$i]} ${DF_DEV[$i]} ${DF_TYPE[$i]} ${DF_SIZE[$i]} ${DF_USED[$i]})"
             return 0
         fi
         if [[ -n "$MIN_FREE" ]]; then
@@ -564,3 +571,113 @@ function check_fs_iused() {
     done
     return 0
 }
+
+# https://stackoverflow.com/questions/14366390/check-if-an-element-is-present-in-a-bash-array
+array_contains () {
+    local seeking=$1; shift
+    local in=1
+    for element; do
+        if [[ $element == "$seeking" ]]; then
+            in=0
+            break
+        fi
+    done
+    return $in
+}
+
+# Checks the local file systems for free space with a warning and critical threshold
+function check_all_local_fs_free() {
+    local THRESHOLD=0 FS_EXCLUSIONS=0 FS_CHECKS=0
+    local FS_EXCLUDED=( )
+    local FS_CHECKED=( )
+    local OPTION
+
+    local OPTIND=1
+    while getopts ":t:X:C:" OPTION ; do
+        case "$OPTION" in
+            t) THRESHOLD="$OPTARG" ;;
+            X) FS_EXCLUDED[$FS_EXCLUSIONS]="$OPTARG" ; ((FS_EXCLUSIONS++)) ;;
+            C) FS_CHECKED[$FS_CHECKS]="$OPTARG" ; ((FS_CHECKS++)) ;;
+            -) ((OPTIND++)) ; break ;;
+            :) die 1 "$CHECK:  Option -$OPTARG requires an argument." ; return 1 ;;
+            \?) die 1 "$CHECK:  Invalid option:  -$OPTARG" ; return 1 ;;
+        esac
+    done
+    shift $((OPTIND-1))
+
+    if [[ ${#FS_DEV[*]} -eq 0 ]]; then
+        nhc_fs_mounts_gather_data || {
+            die 1 "${FUNCNAME[0]}:  /proc/mounts unreadable"
+            return 1
+        }
+    fi
+
+    for ((i=0; i < ${#FS_MNTPT[*]}; i++)); do
+
+        if [ "$FS_EXCLUSIONS" -gt 0 ] && array_contains "${FS_TYPE[$i]}" "${FS_EXCLUDED[@]}"; then
+            continue
+        fi
+
+        if [ $FS_CHECKS -ne 0 ] && ! array_contains "${FS_TYPE[$i]}" "${FS_CHECKED[@]}"; then
+            continue
+        fi
+
+        if ! check_fs_free "${FS_MNTPT[$i]}" "$THRESHOLD"; then
+            die 1 "$CHECK: Free space on ${FS_MNTPT[$i]} less than $THRESHOLD"
+            return 1
+        fi
+
+        #syslog "INFO: FS ${FS_MNTPT[$i]} free space over threshold of $THRESHOLD"
+
+    done
+
+    return 0
+}
+
+
+# Checks the local file systems and execute a touch action
+function check_all_local_fs_mount_check_found_action() {
+    local FS_EXCLUSIONS=0 FS_CHECKS=0
+    local FS_EXCLUDED=( )
+    local FS_CHECKED=( )
+    local OPTION
+
+    local OPTIND=1
+    while getopts ":t:X:C:E:" OPTION ; do
+        case "$OPTION" in
+            X) FS_EXCLUDED[$FS_EXCLUSIONS]="$OPTARG" ; ((FS_EXCLUSIONS++)) ;;
+            C) FS_CHECKED[$FS_CHECKS]="$OPTARG" ; ((FS_CHECKS++)) ;;
+            -) ((OPTIND++)) ; break ;;
+            :) die 1 "$CHECK:  Option -$OPTARG requires an argument." ; return 1 ;;
+            \?) die 1 "$CHECK:  Invalid option:  -$OPTARG" ; return 1 ;;
+        esac
+    done
+    shift $((OPTIND-1))
+
+    if [[ ${#FS_DEV[*]} -eq 0 ]]; then
+        nhc_fs_mounts_gather_data || {
+            die 1 "${FUNCNAME[0]}:  /proc/mounts unreadable"
+            return 1
+        }
+    fi
+
+    for ((i=0; i < ${#FS_MNTPT[*]}; i++)); do
+
+        if [ "$FS_EXCLUSIONS" -gt 0 ] && array_contains "${FS_TYPE[$i]}" "${FS_EXCLUDED[@]}"; then
+            continue
+        fi
+
+        if [ $FS_CHECKS -ne 0 ] && ! array_contains "${FS_TYPE[$i]}" "${FS_CHECKED[@]}"; then
+            continue
+        fi
+
+        if ! check_fs_mount -T -f "${FS_MNTPT[$i]}"; then
+            die 1 "$CHECK: Mount touch check on ${FS_MNTPT[$i]} failed"
+            return 1
+        fi
+
+    done
+
+    return 0
+}
+
