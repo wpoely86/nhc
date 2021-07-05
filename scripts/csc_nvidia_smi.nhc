@@ -27,7 +27,7 @@ function nhc_nvsmi_gather_data() {
 function check_nvsmi_healthmon() {
     if [[ "$#" -eq 1 ]]; then
         # check number of GPUs
-        NUM_GPUS=$1
+        local NUM_GPUS=$1
         if [[ $NUM_GPUS -eq 0 ]]; then
             dbg "$FUNCNAME: No GPUs expected on this node, skipping check"
             return 0
@@ -42,13 +42,14 @@ function check_nvsmi_healthmon() {
     if [[ $NVSMI_HEALTHMON_RC -eq 0 ]]; then
         if [[ ! -z $NUM_GPUS ]]; then
             if [[ $NVSMI_HEALTHMON_LINES -eq $NUM_GPUS ]]; then
-                dbg "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON completed successfully: $NVSMI_HEALTHMON_LINES GPUs detected"
-                return 0
+                dbg "$FUNCNAME:  $NVSMI_HEALTHMON_LINES GPUs detected"
             else
                 die 1 "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON:  Incorrect nb of GPUs "\
                       "(detected=$NVSMI_HEALTHMON_LINES, expected=$NUM_GPUS)"
             fi
         fi
+        dbg "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON completed successfully"
+        return 0
     elif [[ $NVSMI_HEALTHMON_RC -eq 4 ]]; then
         die 1 "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON:  Permission denied"
         return 1
