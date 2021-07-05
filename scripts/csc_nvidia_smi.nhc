@@ -25,13 +25,29 @@ function nhc_nvsmi_gather_data() {
 # Run the nvidia-smi utility and verify that all GPUs
 # are functioning properly.
 function check_nvsmi_healthmon() {
+    if [[ "$#" -eq 1 ]]; then
+        # check number of GPUs
+        local NUM_GPUS=$1
+        if [[ $NUM_GPUS -eq 0 ]]; then
+            # not a GPU node, skip check
+            return 0
+        fi
+        NVIDIA_SMI_HEALTHMON_ARGS='--query-gpu=count --format=csv,noheader'
+    fi
+
     if [[ -z "$NVSMI_HEALTHMON_RC" ]]; then
         nhc_nvsmi_gather_data
     fi
 
     if [[ $NVSMI_HEALTHMON_RC -eq 0 ]]; then
-        dbg "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON completed successfully"
-        return 0
+        if [[ ! -z $NUM_GPUS ]]; then
+            if [[ $NVSMI_HEALTHMON_LINES -eq $NUM_GPUS ]]; then
+                dbg "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON completed successfully"
+                return 0
+            else
+                die 1 "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON:  Incorrect number of GPUs"
+            fi
+        fi
     elif [[ $NVSMI_HEALTHMON_RC -eq 4 ]]; then
         die 1 "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON:  Permission denied"
         return 1
