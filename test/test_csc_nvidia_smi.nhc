@@ -1,0 +1,67 @@
+# Tests for csc_nvidia_smi.nhc
+
+function populate_nvsmi_data_good() {
+    NVSMI_HEALTHMON_LINES=(
+        [0]='Mon Jul  5 18:40:23 2021       '
+        [1]='+-----------------------------------------------------------------------------+'
+        [2]='| NVIDIA-SMI 460.73.01    Driver Version: 460.73.01    CUDA Version: 11.2     |'
+        [3]='|-------------------------------+----------------------+----------------------+'
+        [4]='| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |'
+        [5]='| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |'
+        [6]='|                               |                      |               MIG M. |'
+        [7]='|===============================+======================+======================|'
+        [8]='|   0  Tesla P100-PCIE...  On   | 00000000:83:00.0 Off |                    0 |'
+        [9]='| N/A   31C    P0    26W / 250W |      0MiB / 16280MiB |      0%      Default |'
+        [10]='|                               |                      |                  N/A |'
+        [11]='+-------------------------------+----------------------+----------------------+'
+        [12]='|   1  Tesla P100-PCIE...  On   | 00000000:84:00.0 Off |                    0 |'
+        [13]='| N/A   30C    P0    25W / 250W |      0MiB / 16280MiB |      0%      Default |'
+        [14]='|                               |                      |                  N/A |'
+        [15]='+-------------------------------+----------------------+----------------------+'
+        [16]='                                                                               '
+        [17]='+-----------------------------------------------------------------------------+'
+        [18]='| Processes:                                                                  |'
+        [19]='|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |'
+        [20]='|        ID   ID                                                   Usage      |'
+        [21]='|=============================================================================|'
+        [22]='|  No running processes found                                                 |'
+        [23]='+-----------------------------------------------------------------------------+'
+    )
+    NVSMI_HEALTHMON_RC=0
+}
+
+function populate_nvsmi_data_num_gpus_good() {
+    NVSMI_HEALTHMON_LINES=(
+        [0]="2"
+        [1]="2"
+    )
+    NVSMI_HEALTHMON_RC=0
+}
+
+function populate_nvsmi_data_bad() {
+    NVSMI_HEALTHMON_LINES=(
+        [0]="NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running."
+    )
+    NVSMI_HEALTHMON_RC=1
+}
+
+plan $((2+1+2+2)) "csc_nvidia_smi.nhc" && {
+    is "`type -t nhc_nvsmi_gather_data 2>&1`" 'function' 'nhc_nvsmi_gather_data() loaded properly'
+    is "`type -t check_nvsmi_healthmon 2>&1`" 'function' 'check_nvsmi_healthmon() loaded properly'
+
+    populate_nvsmi_data_good
+    check_nvsmi_healthmon
+    is $? 0 "nVidia Health Check success"
+
+    populate_nvsmi_data_num_gpus_good
+    check_nvsmi_healthmon 2
+    is $? 0 "nVidia Health Check success"
+    check_nvsmi_healthmon 1
+    is $? 1 "nVidia Health Check failure"
+
+    populate_nvsmi_data_bad
+    check_nvsmi_healthmon
+    is $? 1 "nVidia Health Check failure"
+    check_nvsmi_healthmon 2
+    is $? 1 "nVidia Health Check failure"
+} ; unplan
