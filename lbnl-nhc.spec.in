@@ -1,6 +1,6 @@
 %global name    @PACKAGE@
 %global version @VERSION@
-%global release %{rel}%{?dist}.bx.3
+%global release %{rel}%{?dist}.bx.4
 
 %global gitrelease @GITRELEASE@
 %{expand:%%global gd_rel_delta %(git describe --abbrev=4 --always --tags --long --match '[[:digit:]][[:alnum:].]*[[:alnum:]]' --dirty=.1 | cut -d- -f 2- | tr '-' '.')}
