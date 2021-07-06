@@ -46,6 +46,7 @@ function check_nvsmi_healthmon() {
             else
                 die 1 "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON:  Incorrect nb of GPUs "\
                       "(detected=$NVSMI_HEALTHMON_LINES, expected=$NUM_GPUS)"
+                return 1
             fi
         fi
         dbg "$FUNCNAME:  $NVIDIA_SMI_HEALTHMON completed successfully"
