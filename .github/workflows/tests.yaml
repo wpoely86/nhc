@@ -9,9 +9,7 @@ jobs:
         uses: actions/checkout@v2
       - name: run autogen
         run: ./autogen.sh
-      - name: run configure and make
-        run: |
-          ./configure
-          make
+      - name: run configure
+        run: ./configure
       - name: run tests
         run: make test
