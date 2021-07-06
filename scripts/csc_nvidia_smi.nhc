@@ -25,13 +25,11 @@ function nhc_nvsmi_gather_data() {
 # Run the nvidia-smi utility and verify that all GPUs
 # are functioning properly.
 function check_nvsmi_healthmon() {
-    if [[ "$#" -eq 1 ]]; then
-        # check number of GPUs
-        local NUM_GPUS=$1
-        if [[ $NUM_GPUS -eq 0 ]]; then
-            dbg "$FUNCNAME: No GPUs expected on this node, skipping check"
-            return 0
-        fi
+    local NUM_GPUS=${1:--1}
+    if [[ $NUM_GPUS -eq 0 ]]; then
+        dbg "$FUNCNAME: No GPUs expected on this node, skipping check"
+        return 0
+    elif [[ $NUM_GPUS -gt 0 ]]; then
         NVIDIA_SMI_HEALTHMON_ARGS='--query-gpu=count --format=csv,noheader'
     fi
 
@@ -40,7 +38,7 @@ function check_nvsmi_healthmon() {
     fi
 
     if [[ $NVSMI_HEALTHMON_RC -eq 0 ]]; then
-        if [[ ! -z $NUM_GPUS ]]; then
+        if [[ $NUM_GPUS -gt 0 ]]; then
             if [[ $NVSMI_HEALTHMON_LINES -eq $NUM_GPUS ]]; then
                 dbg "$FUNCNAME:  $NVSMI_HEALTHMON_LINES GPUs detected"
             else
